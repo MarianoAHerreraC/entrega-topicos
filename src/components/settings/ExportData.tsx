@@ -5,7 +5,7 @@ import { Download } from "lucide-react";
 export const ExportData = () => {
   // --- CONFIGURACIÓN ---
   // Pega la URL BASE de tu API de Replit aquí
-  const API_BASE_URL = import.meta.env.VITE_API_URL;
+  const API_BASE_URL = "https://entrega-topicos-backend.onrender.com";
   // --------------------
 
   // Construimos la URL completa para la exportación

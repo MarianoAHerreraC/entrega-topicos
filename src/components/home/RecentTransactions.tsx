@@ -18,7 +18,7 @@ export const RecentTransactions = ({ onViewAll }: RecentTransactionsProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const API_URL = `${import.meta.env.VITE_API_URL}/api/expenses/8323618720`;
+  const API_URL = "https://entrega-topicos-backend.onrender.com/api/expenses/8323618720";
 
     const fetchTransactions = async () => {
       try {

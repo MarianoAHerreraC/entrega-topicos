@@ -20,7 +20,7 @@ export const TransactionList = () => {
   const [loading, setLoading] = useState(true);
 
   // --- CONFIGURACIÓN ---
-  const API_BASE_URL = import.meta.env.VITE_API_URL;
+  const API_BASE_URL = "https://entrega-topicos-backend.onrender.com";
   const USER_ID = '8323618720';
   // --------------------
 

@@ -23,7 +23,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({ selectedPeriod }
   const isDarkMode = false; // Ajusta según tu lógica de dark mode
 
   useEffect(() => {
-  const API_URL = `${import.meta.env.VITE_API_URL}/api/expenses/8323618720`;
+  const API_URL = "https://entrega-topicos-backend.onrender.com/api/expenses/8323618720";
     const fetchDataAndProcess = async () => {
       setLoading(true);
       try {
