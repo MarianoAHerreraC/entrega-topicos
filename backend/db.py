@@ -1,43 +1,48 @@
-# FILE: db.py (VERSIÓN CON SOPORTE PARA CUOTAS)
-import sqlite3
+import os
+import psycopg2
+from psycopg2.extras import DictCursor
 
-DB_FILE = "expenses.db"
+# Render nos da esta variable de entorno con la dirección de la BD permanente
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_con():
-    con = sqlite3.connect(DB_FILE)
-    con.row_factory = sqlite3.Row
+    """Establece la conexión con la base de datos PostgreSQL en Render."""
+    if not DATABASE_URL:
+        raise ValueError("No se encontró la variable de entorno DATABASE_URL")
+    con = psycopg2.connect(DATABASE_URL)
+    con.cursor_factory = DictCursor
     return con
 
 def init_db():
+    """Inicializa la tabla de gastos si no existe."""
     with get_con() as con:
-        con.execute(
-            """
-            CREATE TABLE IF NOT EXISTS expenses (
-                id INTEGER PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                ts TEXT NOT NULL,
-                amount REAL NOT NULL,
-                currency TEXT NOT NULL,
-                category TEXT NOT NULL,
-                note TEXT,
-                raw_msg TEXT
-            )
-            """
-        )
-        try:
-            con.execute("ALTER TABLE expenses ADD COLUMN payment_method TEXT")
-        except sqlite3.OperationalError:
-            pass
+        with con.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS expenses (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    ts TIMESTAMPTZ NOT NULL,
+                    amount NUMERIC(10, 2) NOT NULL,
+                    currency TEXT DEFAULT 'ARS',
+                    category TEXT NOT NULL,
+                    note TEXT,
+                    raw_msg TEXT,
+                    payment_method TEXT,
+                    installment_plan_id TEXT,
+                    installment_details TEXT
+                );
+            """)
+        con.commit()
 
-        # --- NUEVO: AÑADIMOS COLUMNAS PARA CUOTAS ---
-        try:
-            con.execute("ALTER TABLE expenses ADD COLUMN installment_plan_id TEXT")
-            con.execute("ALTER TABLE expenses ADD COLUMN installment_details TEXT")
-        except sqlite3.OperationalError:
-            # Las columnas ya existen
-            pass
-
-# --- NUEVO: AÑADIMOS PARÁMETROS PARA CUOTAS ---
+def insert_expense(**kwargs):
+    """Inserta un nuevo gasto en la base de datos."""
+    with get_con() as con:
+        with con.cursor() as cur:
+            cur.execute("""
+                INSERT INTO expenses (user_id, ts, amount, currency, category, note, raw_msg, payment_method, installment_plan_id, installment_details)
+                VALUES (%(user_id)s, %(ts)s, %(amount)s, %(currency)s, %(category)s, %(note)s, %(raw_msg)s, %(payment_method)s, %(installment_plan_id)s, %(installment_details)s)
+            """, kwargs)
+        con.commit()
 def insert_expense(user_id, ts, amount, currency, category, note, raw_msg, 
                    payment_method=None, installment_plan_id=None, installment_details=None):
     with get_con() as con:

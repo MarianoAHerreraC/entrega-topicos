@@ -36,21 +36,10 @@ class Expense(BaseModel):
 @app.post("/api/expenses")
 async def add_expense_api(expense: Expense):
     try:
-        insert_expense(
-            user_id=expense.user_id,
-            ts=expense.ts,
-            amount=expense.amount,
-            currency=expense.currency,
-            category=expense.category,
-            note=expense.note,
-            raw_msg=expense.raw_msg,
-            payment_method=expense.payment_method,
-            installment_plan_id=expense.installment_plan_id,
-            installment_details=expense.installment_details,
-        )
-        return {"ok": True, "message": "Gasto registrado via API"}
+        insert_expense(**expense.dict())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    return {"ok": True, "message": "Gasto registrado via API"}
 import csv
 from datetime import datetime
 from io import StringIO
