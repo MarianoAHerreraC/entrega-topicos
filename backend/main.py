@@ -1,8 +1,7 @@
 import requests
 # FILE: main.py (VERSIÓN FINAL Y COMPLETA)
 import os
-import nest_asyncio
-nest_asyncio.apply()
+## nest_asyncio no es necesario para la ejecución local del bot y el servidor web
 from dotenv import load_dotenv
 load_dotenv()
 import csv
@@ -193,6 +192,7 @@ async def free_text_handler(update, context: ContextTypes.DEFAULT_TYPE):
 
 import asyncio
 
+
 def _run_web():
     import uvicorn
     uvicorn.run("webapp:app", host="0.0.0.0", port=5001, log_level="info")
@@ -203,9 +203,12 @@ async def main():
         print("⚠️ No se encontró TELEGRAM_TOKEN en Secrets.")
         return
 
+
     init_db()
-    threading.Thread(target=_run_web, daemon=True).start()
-    print("🌐 Servidor web iniciado en un hilo.")
+    # Ejecuta el servidor web solo si el script se ejecuta directamente
+    # threading.Thread(target=_run_web, daemon=True).start()
+    # print("🌐 Servidor web iniciado en un hilo.")
+    # Si quieres iniciar el servidor web, ejecuta: python -m uvicorn webapp:app --reload
 
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start_cmd))
