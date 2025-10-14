@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="color:#333; margin-bottom:24px;">📊 Dashboard de Gastos</h1>
+
+<!-- Barra superior -->
+<div style="display:flex; gap:12px; align-items:center; margin-bottom:20px;">
+  {% if selected_cat %}
+    <span style="padding:6px 10px; background:#eef; border:1px solid #cfe; border-radius:14px; font-size:14px;">
+      Filtro activo: <strong>{{ selected_cat }}</strong>
+    </span>
+    <a href="/" style="text-decoration:none; font-size:14px;">Quitar filtro</a>
+  {% endif %}
+  <a
+    href="/export{% if selected_cat %}?cat={{ selected_cat|urlencode }}{% endif %}"
+    style="margin-left:auto; background:#667eea; color:#fff; padding:8px 12px; border-radius:6px; text-decoration:none; font-weight:600;">
+    Exportar CSV
+  </a>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:28px; margin-bottom:28px;">
+  <!-- Formulario de ingreso -->
+  <div>
+    <h2 style="color:#667eea; margin-bottom:16px;">Agregar Gasto</h2>
+    <form action="/add" method="post" style="display:flex; flex-direction:column; gap:14px;">
+      <div>
+        <label style="display:block; margin-bottom:6px; font-weight:600; color:#555;">Monto:</label>
+        <input type="number" name="amount" step="0.01" required
+               style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:16px;">
+      </div>
+
+      <div>
+        <label style="display:block; margin-bottom:6px; font-weight:600; color:#555;">Categoría:</label>
+        <select name="category" required
+                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:16px;">
+          <option value="comida">Comida</option>
+          <option value="transporte">Transporte</option>
+          <option value="servicios">Servicios</option>
+          <option value="salud">Salud</option>
+          <option value="otros">Otros</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block; margin-bottom:6px; font-weight:600; color:#555;">Nota (opcional):</label>
+        <input type="text" name="note"
+               style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:16px;">
+      </div>
+
+      <div>
+        <label style="display:block; margin-bottom:6px; font-weight:600; color:#555;">Fecha (opcional):</label>
+        <input type="date" name="date"
+               style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:16px;">
+      </div>
+
+      <button type="submit"
+              style="background:#667eea; color:#fff; border:none; padding:12px; border-radius:6px; font-size:16px; font-weight:600; cursor:pointer;">
+        Agregar Gasto
+      </button>
+    </form>
+  </div>
+
+  <!-- Resumen -->
+  <div>
+    <h2 style="color:#667eea; margin-bottom:16px;">Resumen del Mes</h2>
+
+    <div style="background:#f8f9fa; padding:18px; border-radius:8px; margin-bottom:16px; border:1px solid #eee;">
+      <div style="font-size:13px; color:#666; margin-bottom:4px;">Total gastado</div>
+      <div style="font-size:32px; font-weight:800; color:#333;">${{ "%.2f"|format(total) }}</div>
+    </div>
+
+    <div style="background:#fff; padding:16px; border-radius:8px; border:1px solid #eee;">
+      <h3 style="margin:0 0 10px; color:#555;">Por Categoría</h3>
+      <div style="position:relative; height:260px;">
+        <canvas id="catBar"></canvas>
+      </div>
+      {% if not breakdown %}
+        <p style="color:#999; font-size:14px; margin-top:10px;">Sin datos en el período.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de movimientos -->
+<h2 style="color:#667eea; margin-bottom:14px;">Movimientos del Mes ({{ start }} a {{ end }})</h2>
+{% if movements %}
+  <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr style="background:#f8f9fa;">
+          <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;color:#555;">Fecha</th>
+          <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;color:#555;">Monto</th>
+          <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;color:#555;">Moneda</th>
+          <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;color:#555;">Categoría</th>
+          <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;color:#555;">Nota</th>
+          <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;color:#555;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mov in movements %}
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:12px; color:#333;">{{ mov.ts }}</td>
+            <td style="padding:12px; color:#333; font-weight:600;">${{ "%.2f"|format(mov.amount) }}</td>
+            <td style="padding:12px; color:#666;">{{ mov.currency }}</td>
+            <td style="padding:12px;">
+              <span style="background:#e3f2fd; color:#1976d2; padding:4px 8px; border-radius:4px; font-size:13px;">
+                {{ mov.category }}
+              </span>
+            </td>
+            <td style="padding:12px; color:#666;">{{ mov.note or '-' }}</td>
+
+            <td style="padding:12px;">
+              <a
+                href="/delete/{{ mov.id }}"
+                onclick="return confirm('¿Eliminar este gasto?');"
+                style="background:#ef4444; color:#fff; padding:6px 10px; border-radius:4px; text-decoration:none; cursor:pointer;">
+                Eliminar
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p style="color:#999; text-align:center; padding:36px;">No hay movimientos este mes.</p>
+{% endif %}
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Datos del servidor
+const CAT_LABELS = JSON.parse('{% if breakdown %}{{ breakdown | map(attribute="category") | list | tojson | safe }}{% else %}[]{% endif %}');
+const CAT_AMOUNTS = JSON.parse('{% if breakdown %}{{ breakdown | map(attribute="amount") | list | tojson | safe }}{% else %}[]{% endif %}');
+
+// Paleta de colores
+const COLORS = CAT_LABELS_JS.map((_, i) => `hsl(${(i*57)%360} 70% 55%)`);
+
+const ctx = document.getElementById('catBar').getContext('2d');
+const bar = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: CAT_LABELS_JS,
+    datasets: [{
+      label: 'Gasto por categoría',
+      data: CAT_AMOUNTS_JS,
+      backgroundColor: COLORS,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: { y: { beginAtZero: true } },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (ctx) => ` $${(ctx.parsed.y ?? 0).toFixed(2)}`
+        }
+      },
+      legend: { display: false }
+    },
+    onClick: (evt, elements) => {
+      if (!elements.length) return;
+      const idx = elements[0].index;
+      const cat = CAT_LABELS_JS[idx];
+      const url = new URL(window.location.href);
+      url.searchParams.set('cat', cat);
+      window.location.href = url.toString();
+    }
+  }
+});
+
+// Ajustar el link de Exportar si hay ?cat=
+document.querySelectorAll('a[href^="/export"]').forEach(a => {
+  const urlNow = new URL(window.location.href);
+  const cat = urlNow.searchParams.get('cat');
+  if (cat) a.href = `/export?cat=${encodeURIComponent(cat)}`;
+});
+</script>
+{% endblock %}
+
+
