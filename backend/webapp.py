@@ -3,20 +3,24 @@ from datetime import datetime
 from io import StringIO
 from typing import Optional
 import pytz
-from fastapi import FastAPI, Form, Request, HTTPException
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi import FastAPI, Form, Request, HTTPException, Body
+from fastapi.responses import RedirectResponse, StreamingResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-from ai_openai import ai_parse_expense_openai
-
-from db import get_con, insert_expense, delete_expense
+from pydantic import BaseModel
+from db import get_con, insert_expense, delete_expense, init_db
 
 BA_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 app = FastAPI()
+init_db()
 templates = Jinja2Templates(directory="templates")
+
+# --- DEFINE period_month FUNCTION ---
+def period_month():
+    today = datetime.now(BA_TZ).date()
+    start = today.replace(day=1).isoformat()
+    end = today.isoformat()
+    return start, end
 
 # --- ENDPOINTS DE API PARA TU FRONTEND ---
 # Modelo para recibir gastos por API
@@ -36,10 +40,21 @@ class Expense(BaseModel):
 @app.post("/api/expenses")
 async def add_expense_api(expense: Expense):
     try:
-        insert_expense(**expense.dict())
+        insert_expense(
+            user_id=expense.user_id,
+            ts=expense.ts,
+            amount=expense.amount,
+            currency=expense.currency,
+            category=expense.category,
+            note=expense.note,
+            raw_msg=expense.raw_msg,
+            payment_method=expense.payment_method,
+            installment_plan_id=expense.installment_plan_id,
+            installment_details=expense.installment_details,
+        )
+        return {"ok": True, "message": "Gasto registrado via API"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return {"ok": True, "message": "Gasto registrado via API"}
 import csv
 from datetime import datetime
 from io import StringIO
@@ -51,7 +66,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from ai_openai import ai_parse_expense_openai
+# from ai_openai import ai_parse_expense_openai
 
 from db import get_con, insert_expense, delete_expense
 
@@ -115,26 +130,14 @@ async def update_expense_api(
 @app.get("/api/expenses/{user_id}")
 async def get_expenses_api(user_id: str):
     with get_con() as con:
-        with con.cursor() as cur:
-            cur.execute(
-                "SELECT id, ts as date, amount, category, note as description, user_id, payment_method, installment_plan_id, installment_details "
-                "FROM expenses WHERE user_id = %s ORDER BY ts DESC",
-                (user_id,)
-            )
-            rows = cur.fetchall()
-    return [dict(row) for row in rows]
+        # --- MODIFICACIÓN CLAVE: AÑADIMOS LOS CAMPOS DE CUOTAS ---
+        rows = con.execute(
+            "SELECT id, ts as date, amount, category, note as description, user_id, payment_method, installment_plan_id, installment_details "
+            "FROM expenses WHERE user_id = ? "
+            "ORDER BY ts DESC", (user_id,)
+        ).fetchall()
+        return [dict(row) for row in rows]
 
-@app.post("/api/expenses/parse")
-async def parse_expense(request: Request):
-    data = await request.json()
-    text = data.get("text", "")
-    if not text:
-        return JSONResponse(content={"error": "No text provided"}, status_code=400)
-    try:
-        result = await ai_parse_expense_openai(text)
-        return JSONResponse(content={"parsed": result})
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
 # --- Rutas para la web original de Replit (sin cambios) ---
