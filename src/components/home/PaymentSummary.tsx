@@ -17,7 +17,7 @@ export const PaymentSummary = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const API_URL = 'http://localhost:5001/api/expenses/8323618720';
+  const API_URL = `${import.meta.env.VITE_API_URL}/api/expenses/8323618720`;
     axios.get<Transaction[]>(API_URL).then(res => {
       const data = res.data;
       const grouped: Record<string, number> = {};

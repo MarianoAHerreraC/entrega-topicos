@@ -27,7 +27,7 @@ export const SearchFilters = ({
   
   useEffect(() => {
     // Pega aquí la URL de tu API con tu ID de Telegram
-    const API_URL = 'http://localhost:5001/api/expenses/8323618720';
+  const API_URL = `${import.meta.env.VITE_API_URL}/api/expenses/8323618720`;
     
     const fetchCategories = async () => {
       try {

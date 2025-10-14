@@ -21,6 +21,7 @@ templates = Jinja2Templates(directory="templates")
 
 # --- CONFIGURACIÓN DE CORS ---
 origins = [
+    "https://entrega-topicos.vercel.app", # Producción Vercel
     "http://localhost:8080",
     "http://localhost:8081",
     "http://localhost:5173",
