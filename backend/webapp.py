@@ -115,13 +115,14 @@ async def update_expense_api(
 @app.get("/api/expenses/{user_id}")
 async def get_expenses_api(user_id: str):
     with get_con() as con:
-        # --- MODIFICACIÓN CLAVE: AÑADIMOS LOS CAMPOS DE CUOTAS ---
-        rows = con.execute(
-            "SELECT id, ts as date, amount, category, note as description, user_id, payment_method, installment_plan_id, installment_details "
-            "FROM expenses WHERE user_id = ? "
-            "ORDER BY ts DESC", (user_id,)
-        ).fetchall()
-        return [dict(row) for row in rows]
+        with con.cursor() as cur:
+            cur.execute(
+                "SELECT id, ts as date, amount, category, note as description, user_id, payment_method, installment_plan_id, installment_details "
+                "FROM expenses WHERE user_id = %s ORDER BY ts DESC",
+                (user_id,)
+            )
+            rows = cur.fetchall()
+    return [dict(row) for row in rows]
 
 @app.post("/api/expenses/parse")
 async def parse_expense(request: Request):
