@@ -55,24 +55,7 @@ async def add_expense_api(expense: Expense):
         return {"ok": True, "message": "Gasto registrado via API"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-import csv
-from datetime import datetime
-from io import StringIO
-from typing import Optional
-import pytz
-from fastapi import FastAPI, Form, Request, HTTPException
-from fastapi.responses import RedirectResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-# from ai_openai import ai_parse_expense_openai
-
-from db import get_con, insert_expense, delete_expense
-
-BA_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+## ...existing code...
 
 
 # --- CONFIGURACIÓN DE CORS ---
@@ -99,9 +82,13 @@ app.add_middleware(
 async def delete_expense_api(expense_id: int):
     try:
         with get_con() as con:
-            cur = con.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+            cur = con.cursor()
+            cur.execute("DELETE FROM expenses WHERE id = %s", (expense_id,))
+            con.commit()
             if cur.rowcount == 0:
+                cur.close()
                 raise HTTPException(status_code=404, detail="Gasto no encontrado")
+            cur.close()
         return {"ok": True, "message": "Gasto eliminado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -116,12 +103,16 @@ async def update_expense_api(
 ):
     try:
         with get_con() as con:
-            cur = con.execute(
-                "UPDATE expenses SET amount = ?, payment_method = ? WHERE id = ?",
+            cur = con.cursor()
+            cur.execute(
+                "UPDATE expenses SET amount = %s, payment_method = %s WHERE id = %s",
                 (amount, payment_method, expense_id)
             )
+            con.commit()
             if cur.rowcount == 0:
+                cur.close()
                 raise HTTPException(status_code=404, detail="Gasto no encontrado")
+            cur.close()
         return {"ok": True, "message": "Gasto actualizado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -130,13 +121,16 @@ async def update_expense_api(
 @app.get("/api/expenses/{user_id}")
 async def get_expenses_api(user_id: str):
     with get_con() as con:
-        # --- MODIFICACIÓN CLAVE: AÑADIMOS LOS CAMPOS DE CUOTAS ---
-        rows = con.execute(
+        cur = con.cursor()
+        cur.execute(
             "SELECT id, ts as date, amount, category, note as description, user_id, payment_method, installment_plan_id, installment_details "
-            "FROM expenses WHERE user_id = ? "
-            "ORDER BY ts DESC", (user_id,)
-        ).fetchall()
-        return [dict(row) for row in rows]
+            "FROM expenses WHERE user_id = %s ORDER BY ts DESC",
+            (user_id,)
+        )
+        rows = cur.fetchall()
+        result = [dict(zip([desc[0] for desc in cur.description], row)) for row in rows]
+        cur.close()
+    return result
 
 
 
@@ -151,8 +145,12 @@ def period_month():
 async def dashboard(request: Request):
     start, end = period_month()
     with get_con() as con:
-        total = float(con.execute("SELECT COALESCE(SUM(amount),0) FROM expenses WHERE ts BETWEEN ? AND ?", (start, end)).fetchone()[0] or 0.0)
-        rows = [dict(r) for r in con.execute("SELECT id, ts, amount, currency, category, note FROM expenses WHERE ts BETWEEN ? AND ? ORDER BY ts DESC, id DESC", (start, end))]
+        cur = con.cursor()
+        cur.execute("SELECT COALESCE(SUM(amount),0) FROM expenses WHERE ts BETWEEN %s AND %s", (start, end))
+        total = float(cur.fetchone()[0] or 0.0)
+        cur.execute("SELECT id, ts, amount, currency, category, note FROM expenses WHERE ts BETWEEN %s AND %s ORDER BY ts DESC, id DESC", (start, end))
+        rows = [dict(zip([desc[0] for desc in cur.description], r)) for r in cur.fetchall()]
+        cur.close()
     category_breakdown = {}
     for row in rows:
         cat = row["category"]
@@ -176,7 +174,10 @@ async def add_expense(amount: float = Form(...), category: str = Form(...), note
 async def export_csv():
     start, end = period_month()
     with get_con() as con:
-        rows = [dict(r) for r in con.execute("SELECT id, ts, amount, currency, category, note FROM expenses WHERE ts BETWEEN ? AND ? ORDER BY ts ASC, id ASC", (start, end))]
+        cur = con.cursor()
+        cur.execute("SELECT id, ts, amount, currency, category, note FROM expenses WHERE ts BETWEEN %s AND %s ORDER BY ts ASC, id ASC", (start, end))
+        rows = [dict(zip([desc[0] for desc in cur.description], r)) for r in cur.fetchall()]
+        cur.close()
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(["id", "ts", "amount", "currency", "category", "note"])
