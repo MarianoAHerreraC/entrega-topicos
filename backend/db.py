@@ -29,16 +29,21 @@ def init_db():
 
 def insert_expense(user_id, ts, amount, currency, category, note, raw_msg, 
                    payment_method=None, installment_plan_id=None, installment_details=None):
-    with get_con() as con:
-        cur = con.cursor()
-        cur.execute(
-            "INSERT INTO expenses (user_id, ts, amount, currency, category, note, raw_msg, payment_method, installment_plan_id, installment_details) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-            (user_id, ts, amount, currency, category, note, raw_msg, 
-             payment_method, installment_plan_id, installment_details)
-        )
-        con.commit()
-        cur.close()
+    print("[DEBUG] insert_expense called with:", user_id, ts, amount, currency, category, note, raw_msg, payment_method, installment_plan_id, installment_details)
+    try:
+        with get_con() as con:
+            cur = con.cursor()
+            cur.execute(
+                "INSERT INTO expenses (user_id, ts, amount, currency, category, note, raw_msg, payment_method, installment_plan_id, installment_details) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (user_id, ts, amount, currency, category, note, raw_msg, 
+                 payment_method, installment_plan_id, installment_details)
+            )
+            con.commit()
+            cur.close()
+        print("[DEBUG] insert_expense: SUCCESS")
+    except Exception as e:
+        print(f"[ERROR] insert_expense: {e}")
 
 def delete_expense(expense_id: int):
     with get_con() as con:
