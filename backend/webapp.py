@@ -1,3 +1,39 @@
+from pydantic import BaseModel, Field
+from typing import Optional
+# --- ENDPOINTS DE API PARA TU FRONTEND ---
+
+# Modelo para recibir gastos por API
+class Expense(BaseModel):
+    user_id: str
+    ts: str
+    amount: float
+    currency: str = "ARS"
+    category: str
+    note: Optional[str] = None
+    raw_msg: str
+    payment_method: Optional[str] = None
+    installment_plan_id: Optional[str] = None
+    installment_details: Optional[str] = None
+
+# Endpoint para registrar gastos vía API
+@app.post("/api/expenses")
+async def add_expense_api(expense: Expense):
+    try:
+        insert_expense(
+            user_id=expense.user_id,
+            ts=expense.ts,
+            amount=expense.amount,
+            currency=expense.currency,
+            category=expense.category,
+            note=expense.note,
+            raw_msg=expense.raw_msg,
+            payment_method=expense.payment_method,
+            installment_plan_id=expense.installment_plan_id,
+            installment_details=expense.installment_details,
+        )
+        return {"ok": True, "message": "Gasto registrado via API"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 # FILE: webapp.py (VERSIÓN CON SOPORTE PARA CUOTAS EN LA API)
 import csv
 from datetime import datetime

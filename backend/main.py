@@ -1,3 +1,4 @@
+import requests
 # FILE: main.py (VERSIÓN FINAL Y COMPLETA)
 import os
 import nest_asyncio
@@ -103,14 +104,21 @@ async def gasto_cmd(update, context: ContextTypes.DEFAULT_TYPE):
     else:
         full_timestamp = ts_from_parser
 
-    insert_expense(user_id=str(update.effective_user.id),
-                   ts=full_timestamp,
-                   amount=amount,
-                   currency="ARS",
-                   category=category,
-                   note=note,
-                   raw_msg=text,
-                   payment_method=payment_method)
+    expense_data = {
+        "user_id": str(update.effective_user.id),
+        "ts": full_timestamp,
+        "amount": amount,
+        "currency": "ARS",
+        "category": category,
+        "note": note,
+        "raw_msg": text,
+        "payment_method": payment_method
+    }
+    api_url = "https://entrega-topicos-backend.onrender.com/api/expenses"
+    response = requests.post(api_url, json=expense_data)
+    if response.status_code != 200:
+        await update.message.reply_text(f"❌ Error al registrar el gasto en la API: {response.text}")
+        return
 
     formatted_date = datetime.fromisoformat(full_timestamp).strftime(
         "%d/%m/%Y %H:%M")
@@ -145,16 +153,20 @@ async def cuotas_cmd(update, context: ContextTypes.DEFAULT_TYPE):
         # Calculamos la fecha y hora para cada cuota futura
         fecha_cuota = fecha_inicio + relativedelta(months=i)
 
-        insert_expense(user_id=str(update.effective_user.id),
-                       ts=fecha_cuota.isoformat(), # Guardamos el timestamp completo
-                       amount=monto_por_cuota,
-                       currency="ARS",
-                       category=categoria,
-                       note=descripcion,
-                       raw_msg=f"Cuota {i+1}/{cantidad_cuotas}",
-                       payment_method="crédito",
-                       installment_plan_id=plan_id,
-                       installment_details=f"{i+1}/{cantidad_cuotas}")
+        expense_data = {
+            "user_id": str(update.effective_user.id),
+            "ts": fecha_cuota.isoformat(),
+            "amount": monto_por_cuota,
+            "currency": "ARS",
+            "category": categoria,
+            "note": descripcion,
+            "raw_msg": f"Cuota {i+1}/{cantidad_cuotas}",
+            "payment_method": "crédito",
+            "installment_plan_id": plan_id,
+            "installment_details": f"{i+1}/{cantidad_cuotas}"
+        }
+        api_url = "https://entrega-topicos-backend.onrender.com/api/expenses"
+        requests.post(api_url, json=expense_data)
 
     await update.message.reply_text(
         f"✅ ¡Plan de {cantidad_cuotas} cuotas registrado!")
