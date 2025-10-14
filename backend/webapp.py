@@ -1,7 +1,24 @@
-from pydantic import BaseModel, Field
+import csv
+from datetime import datetime
+from io import StringIO
 from typing import Optional
-# --- ENDPOINTS DE API PARA TU FRONTEND ---
+import pytz
+from fastapi import FastAPI, Form, Request, HTTPException
+from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+from ai_openai import ai_parse_expense_openai
 
+from db import get_con, insert_expense, delete_expense
+
+BA_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+# --- ENDPOINTS DE API PARA TU FRONTEND ---
 # Modelo para recibir gastos por API
 class Expense(BaseModel):
     user_id: str
@@ -34,7 +51,6 @@ async def add_expense_api(expense: Expense):
         return {"ok": True, "message": "Gasto registrado via API"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-# FILE: webapp.py (VERSIÓN CON SOPORTE PARA CUOTAS EN LA API)
 import csv
 from datetime import datetime
 from io import StringIO
