@@ -8,3 +8,4 @@ gunicorn
 openai
 psycopg2-binary
 python-dateutil
+nest_asyncio
