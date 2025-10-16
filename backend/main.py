@@ -82,13 +82,24 @@ async def gasto_cmd(update, context: ContextTypes.DEFAULT_TYPE):
     note = parsed.get("note") or ""
     payment_method = parsed.get("payment_method")
 
-    full_timestamp = datetime.now(BA_TZ).isoformat()
-    if 'T' not in ts_from_parser:
-        current_time = datetime.now(BA_TZ).time()
-        full_timestamp = datetime.combine(
-            datetime.fromisoformat(ts_from_parser), current_time).isoformat()
-    else:
-        full_timestamp = ts_from_parser
+    # Siempre usar la zona horaria de Buenos Aires
+    try:
+        if 'T' not in ts_from_parser:
+            # Si solo hay fecha, agregar la hora actual en BA_TZ
+            current_time = datetime.now(BA_TZ).time()
+            dt = datetime.combine(datetime.fromisoformat(ts_from_parser), current_time)
+            full_timestamp = BA_TZ.localize(dt).isoformat()
+        else:
+            # Si ya hay fecha y hora, asegurar que esté en BA_TZ
+            dt = datetime.fromisoformat(ts_from_parser)
+            if dt.tzinfo is None:
+                # Si no tiene zona horaria, asumir BA_TZ
+                full_timestamp = BA_TZ.localize(dt).isoformat()
+            else:
+                full_timestamp = dt.astimezone(BA_TZ).isoformat()
+    except Exception:
+        # Fallback: usar la hora actual en BA_TZ
+        full_timestamp = datetime.now(BA_TZ).isoformat()
 
     expense_data = {
         "user_id": str(update.effective_user.id),
