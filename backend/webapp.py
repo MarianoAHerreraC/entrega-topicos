@@ -83,13 +83,22 @@ async def delete_expense_api(expense_id: int):
     try:
         with get_con() as con:
             cur = con.cursor()
-            cur.execute("DELETE FROM expenses WHERE id = %s", (expense_id,))
-            con.commit()
-            if cur.rowcount == 0:
+            # Buscar si el gasto tiene installment_plan_id
+            cur.execute("SELECT installment_plan_id FROM expenses WHERE id = %s", (expense_id,))
+            row = cur.fetchone()
+            if row is None:
                 cur.close()
                 raise HTTPException(status_code=404, detail="Gasto no encontrado")
+            plan_id = row[0]
+            if plan_id:
+                # Eliminar todas las cuotas asociadas
+                cur.execute("DELETE FROM expenses WHERE installment_plan_id = %s", (plan_id,))
+            else:
+                # Eliminar solo el gasto
+                cur.execute("DELETE FROM expenses WHERE id = %s", (expense_id,))
+            con.commit()
             cur.close()
-        return {"ok": True, "message": "Gasto eliminado correctamente"}
+        return {"ok": True, "message": "Gasto(s) eliminado(s) correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
