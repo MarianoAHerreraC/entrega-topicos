@@ -85,10 +85,15 @@ async def gasto_cmd(update, context: ContextTypes.DEFAULT_TYPE):
     # Siempre usar la zona horaria de Buenos Aires
     try:
         if 'T' not in ts_from_parser:
-            # Si solo hay fecha, agregar la hora actual en BA_TZ
-            current_time = datetime.now(BA_TZ).time()
-            dt = datetime.combine(datetime.fromisoformat(ts_from_parser), current_time)
-            full_timestamp = BA_TZ.localize(dt).isoformat()
+            # Si solo hay fecha, agregar la hora actual de Buenos Aires (no la del sistema)
+            ba_now = datetime.now(BA_TZ)
+            dt = datetime.combine(datetime.fromisoformat(ts_from_parser), ba_now.time())
+            dt_ba = BA_TZ.localize(dt)
+            # Si accidentalmente dt ya tiene tzinfo, usar astimezone
+            if dt_ba.tzinfo is None:
+                full_timestamp = BA_TZ.localize(dt_ba).isoformat()
+            else:
+                full_timestamp = dt_ba.astimezone(BA_TZ).isoformat()
         else:
             # Si ya hay fecha y hora, asegurar que esté en BA_TZ
             dt = datetime.fromisoformat(ts_from_parser)
