@@ -163,7 +163,7 @@ async def dashboard(request: Request):
     category_breakdown = {}
     for row in rows:
         cat = row["category"]
-        amt = row["amount"]
+        amt = float(row["amount"])
         category_breakdown[cat] = category_breakdown.get(cat, 0.0) + amt
     breakdown = []
     if total > 0:

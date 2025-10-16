@@ -10,7 +10,9 @@ PAYMENT_METHODS = [
     "mercadopago", "mp",
     "modo", 
     "transferencia", 
-    "binance"
+    "binance",
+    "sube",
+    "uala",
 ]
 
 def parse_gasto_args(text: str, today_iso: str):
