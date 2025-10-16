@@ -40,9 +40,26 @@ class Expense(BaseModel):
 @app.post("/api/expenses")
 async def add_expense_api(expense: Expense):
     try:
+        # Normalizar timestamp a BA_TZ y agregar hora si solo viene fecha
+        ts = expense.ts
+        from datetime import datetime
+        import pytz
+        BA_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
+        if 'T' not in ts:
+            # Solo fecha, agregar hora actual de BA
+            ba_now = datetime.now(BA_TZ)
+            dt = datetime.combine(datetime.fromisoformat(ts), ba_now.time())
+            ts_ba = BA_TZ.localize(dt)
+        else:
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                ts_ba = BA_TZ.localize(dt)
+            else:
+                ts_ba = dt.astimezone(BA_TZ)
+        ts_final = ts_ba.isoformat()
         insert_expense(
             user_id=expense.user_id,
-            ts=expense.ts,
+            ts=ts_final,
             amount=expense.amount,
             currency=expense.currency,
             category=expense.category,
@@ -174,9 +191,26 @@ async def dashboard(request: Request):
 
 @app.post("/add")
 async def add_expense(amount: float = Form(...), category: str = Form(...), note: Optional[str] = Form(None), date: Optional[str] = Form(None)):
+    # Normalizar timestamp a BA_TZ y agregar hora si solo viene fecha
+    from datetime import datetime
+    import pytz
+    BA_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
     if not date:
-        date = datetime.now(BA_TZ).date().isoformat()
-    insert_expense(user_id="web", ts=date, amount=amount, currency="ARS", category=category, note=note or "", raw_msg=f"web:{amount}:{category}")
+        ba_now = datetime.now(BA_TZ)
+        dt = ba_now
+    else:
+        if 'T' not in date:
+            ba_now = datetime.now(BA_TZ)
+            dt = datetime.combine(datetime.fromisoformat(date), ba_now.time())
+            dt = BA_TZ.localize(dt)
+        else:
+            dt = datetime.fromisoformat(date)
+            if dt.tzinfo is None:
+                dt = BA_TZ.localize(dt)
+            else:
+                dt = dt.astimezone(BA_TZ)
+    ts_final = dt.isoformat()
+    insert_expense(user_id="web", ts=ts_final, amount=amount, currency="ARS", category=category, note=note or "", raw_msg=f"web:{amount}:{category}")
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/export")
