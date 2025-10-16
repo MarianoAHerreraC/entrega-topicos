@@ -129,7 +129,10 @@ async def gasto_cmd(update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error al registrar el gasto en la API: {error_detail}")
         return
 
-    formatted_date = datetime.fromisoformat(full_timestamp).strftime("%d/%m/%Y %H:%M")
+    # Mostrar siempre la hora en Buenos Aires
+    dt = datetime.fromisoformat(full_timestamp)
+    dt_ba = dt.astimezone(BA_TZ)
+    formatted_date = dt_ba.strftime("%d/%m/%Y %H:%M")
 
     msg = f"✅ Registrado: ${amount:.2f} en *{category}* ({formatted_date})."
     await update.message.reply_text(msg, parse_mode="Markdown")
