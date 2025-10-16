@@ -103,13 +103,18 @@ async def gasto_cmd(update, context: ContextTypes.DEFAULT_TYPE):
     
     # El bot envía el gasto a la API de Render
     response = requests.post(f"{API_URL}/api/expenses", json=expense_data)
-    
+
     if response.status_code != 200:
-        await update.message.reply_text(f"❌ Error al registrar el gasto en la API: {response.text}")
+        # Mostrar el error exacto que devuelve la API (si es JSON, mostrar el detalle)
+        try:
+            error_detail = response.json().get("detail", response.text)
+        except Exception:
+            error_detail = response.text
+        await update.message.reply_text(f"❌ Error al registrar el gasto en la API: {error_detail}")
         return
 
     formatted_date = datetime.fromisoformat(full_timestamp).strftime("%d/%m/%Y %H:%M")
-    
+
     msg = f"✅ Registrado: ${amount:.2f} en *{category}* ({formatted_date})."
     await update.message.reply_text(msg, parse_mode="Markdown")
 
