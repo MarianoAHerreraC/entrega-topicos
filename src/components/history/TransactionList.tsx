@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 export const TransactionList = () => {
+
+  // Props para filtros
+  // Si no se pasan, usar valores por defecto (para compatibilidad)
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editPayment, setEditPayment] = useState("");
@@ -23,6 +26,14 @@ export const TransactionList = () => {
   const API_BASE_URL = "https://entrega-topicos-backend.onrender.com";
   const USER_ID = '8323618720';
   // --------------------
+
+  // Filtros recibidos por props
+  // @ts-ignore
+  const searchTerm = typeof window !== 'undefined' && window.__searchTerm ? window.__searchTerm : '';
+  // @ts-ignore
+  const selectedCategory = typeof window !== 'undefined' && window.__selectedCategory ? window.__selectedCategory : '';
+  // @ts-ignore
+  const selectedPayment = typeof window !== 'undefined' && window.__selectedPayment ? window.__selectedPayment : '';
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -40,6 +51,14 @@ export const TransactionList = () => {
     };
     fetchTransactions();
   }, []);
+
+  // Filtrado local
+  const filteredTransactions = transactions.filter(tx => {
+    const matchesSearch = searchTerm === '' || (tx.description || tx.category || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === '' || tx.category === selectedCategory;
+    const matchesPayment = selectedPayment === '' || (tx.payment_method || '') === selectedPayment;
+    return matchesSearch && matchesCategory && matchesPayment;
+  });
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("¿Estás seguro de que quieres eliminar este gasto?")) { return; }
@@ -60,11 +79,11 @@ export const TransactionList = () => {
   };
   
   if (loading) {
-    return <p className="text-center text-muted-foreground">Cargando historial...</p>;
+  return <p className="text-center text-muted-foreground">Cargando historial...</p>;
   }
 
   // --- CORRECCIÓN EN LA LÓGICA DE AGRUPACIÓN Y ORDENAMIENTO ---
-  const groupedTransactions = transactions.reduce((acc, transaction) => {
+  const groupedTransactions = filteredTransactions.reduce((acc, transaction) => {
     // 1. Agrupamos por fecha en formato 'YYYY-MM-DD' que es ordenable
     const dayKey = format(parseISO(transaction.date), "yyyy-MM-dd");
     if (!acc[dayKey]) {
